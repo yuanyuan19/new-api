@@ -16,8 +16,11 @@ version: '3.4' # For compatibility with older Docker versions
 
 services:
   new-api:
-    image: calciumion/new-api:latest
-    container_name: new-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # image: calciumion/new-api:latest  # 使用本地构建而不是远程镜像
+    container_name: new-api-dev
     restart: always
     command: --log-dir /app/logs
     ports:
