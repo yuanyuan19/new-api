@@ -181,6 +181,12 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 	if err != nil {
 		return nil, types.NewOpenAIError(err, types.ErrorCodeReadResponseBodyFailed, http.StatusInternalServerError)
 	}
+	
+	// 捕获上游API返回的HTTP响应体（Body）
+	if len(responseBody) < 50000 {
+		info.UpstreamResponseBody = string(responseBody)
+	}
+	
 	if common.DebugEnabled {
 		println("upstream response body:", string(responseBody))
 	}
@@ -266,6 +272,11 @@ func OpenaiHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 			return nil, types.NewError(err, types.ErrorCodeBadResponseBody)
 		}
 		responseBody = geminiRespStr
+	}
+
+	// 捕获返回给客户端的HTTP响应体（Body）
+	if len(responseBody) < 50000 {
+		info.ClientResponseBody = string(responseBody)
 	}
 
 	service.IOCopyBytesGracefully(c, resp, responseBody)

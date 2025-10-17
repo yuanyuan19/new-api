@@ -113,6 +113,12 @@ type RelayInfo struct {
 
 	Request dto.Request
 
+	// HTTP请求体和响应体内容（用于日志记录，不包含Headers）
+	ClientRequestBody    string // 收到的客户端HTTP请求体（Body）
+	UpstreamRequestBody  string // 发给上游API的HTTP请求体（Body）
+	UpstreamResponseBody string // 上游API返回的HTTP响应体（Body）
+	ClientResponseBody   string // 返回给客户端的HTTP响应体（Body）
+
 	ThinkingContentInfo
 	*ClaudeConvertInfo
 	*RerankerInfo

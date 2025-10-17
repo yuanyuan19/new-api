@@ -23,6 +23,12 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 
 	info.InitChannelMeta(c)
 
+	// 捕获客户端原始HTTP请求体（Body）
+	clientRequestBody, err := common.GetRequestBody(c)
+	if err == nil && len(clientRequestBody) > 0 && len(clientRequestBody) < 50000 {
+		info.ClientRequestBody = string(clientRequestBody)
+	}
+
 	claudeReq, ok := info.Request.(*dto.ClaudeRequest)
 
 	if !ok {
@@ -130,6 +136,12 @@ func ClaudeHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 		if common.DebugEnabled {
 			println("requestBody: ", string(jsonData))
 		}
+		
+		// 捕获发给上游的HTTP请求体（Body）
+		if len(jsonData) < 50000 {
+			info.UpstreamRequestBody = string(jsonData)
+		}
+		
 		requestBody = bytes.NewBuffer(jsonData)
 	}
 

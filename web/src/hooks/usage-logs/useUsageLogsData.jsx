@@ -467,6 +467,31 @@ export const useLogsData = () => {
             value: other.reasoning_effort,
           });
         }
+        // 添加HTTP请求体和响应体详细信息
+        if (other?.client_request_body) {
+          expandDataLocal.push({
+            key: t('客户端请求体'),
+            value: other.client_request_body,
+          });
+        }
+        if (other?.upstream_request_body) {
+          expandDataLocal.push({
+            key: t('上游请求体'),
+            value: other.upstream_request_body,
+          });
+        }
+        if (other?.upstream_response_body) {
+          expandDataLocal.push({
+            key: t('上游响应体'),
+            value: other.upstream_response_body,
+          });
+        }
+        if (other?.client_response_body) {
+          expandDataLocal.push({
+            key: t('客户端响应体'),
+            value: other.client_response_body,
+          });
+        }
       }
       if (other?.request_path) {
         expandDataLocal.push({

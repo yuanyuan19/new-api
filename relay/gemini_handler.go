@@ -55,6 +55,12 @@ func trimModelThinking(modelName string) string {
 func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {
 	info.InitChannelMeta(c)
 
+	// 捕获客户端原始HTTP请求体（Body）
+	clientRequestBody, err := common.GetRequestBody(c)
+	if err == nil && len(clientRequestBody) > 0 && len(clientRequestBody) < 50000 {
+		info.ClientRequestBody = string(clientRequestBody)
+	}
+
 	geminiReq, ok := info.Request.(*dto.GeminiChatRequest)
 	if !ok {
 		return types.NewErrorWithStatusCode(fmt.Errorf("invalid request type, expected *dto.GeminiChatRequest, got %T", info.Request), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
@@ -164,6 +170,11 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 
 		logger.LogDebug(c, "Gemini request body: "+string(jsonData))
 
+		// 捕获发给上游的HTTP请求体（Body）
+		if len(jsonData) < 50000 {
+			info.UpstreamRequestBody = string(jsonData)
+		}
+
 		requestBody = bytes.NewReader(jsonData)
 	}
 
@@ -199,6 +210,12 @@ func GeminiHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 
 func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {
 	info.InitChannelMeta(c)
+
+	// 捕获客户端原始HTTP请求体（Body）
+	clientRequestBody, err := common.GetRequestBody(c)
+	if err == nil && len(clientRequestBody) > 0 && len(clientRequestBody) < 50000 {
+		info.ClientRequestBody = string(clientRequestBody)
+	}
 
 	isBatch := strings.HasSuffix(c.Request.URL.Path, "batchEmbedContents")
 	info.IsGeminiBatchEmbedding = isBatch
@@ -267,6 +284,12 @@ func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo) (newAPI
 		}
 	}
 	logger.LogDebug(c, "Gemini embedding request body: "+string(jsonData))
+	
+	// 捕获发给上游的HTTP请求体（Body）
+	if len(jsonData) < 50000 {
+		info.UpstreamRequestBody = string(jsonData)
+	}
+	
 	requestBody = bytes.NewReader(jsonData)
 
 	resp, err := adaptor.DoRequest(c, info, requestBody)

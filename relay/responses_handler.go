@@ -21,6 +21,12 @@ import (
 func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {
 	info.InitChannelMeta(c)
 
+	// 捕获客户端原始HTTP请求体（Body）
+	clientRequestBody, err := common.GetRequestBody(c)
+	if err == nil && len(clientRequestBody) > 0 && len(clientRequestBody) < 50000 {
+		info.ClientRequestBody = string(clientRequestBody)
+	}
+
 	responsesReq, ok := info.Request.(*dto.OpenAIResponsesRequest)
 	if !ok {
 		return types.NewErrorWithStatusCode(fmt.Errorf("invalid request type, expected dto.OpenAIResponsesRequest, got %T", info.Request), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
@@ -75,6 +81,12 @@ func ResponsesHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *
 		if common.DebugEnabled {
 			println("requestBody: ", string(jsonData))
 		}
+		
+		// 捕获发给上游的HTTP请求体（Body）
+		if len(jsonData) < 50000 {
+			info.UpstreamRequestBody = string(jsonData)
+		}
+		
 		requestBody = bytes.NewBuffer(jsonData)
 	}
 

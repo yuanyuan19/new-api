@@ -18,6 +18,13 @@ import (
 func AudioHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {
 	info.InitChannelMeta(c)
 
+	// 捕获客户端原始HTTP请求体（Body）
+	// 注意：Audio请求可能是multipart/form-data格式
+	clientRequestBody, err := common.GetRequestBody(c)
+	if err == nil && len(clientRequestBody) > 0 && len(clientRequestBody) < 50000 {
+		info.ClientRequestBody = string(clientRequestBody)
+	}
+
 	audioReq, ok := info.Request.(*dto.AudioRequest)
 	if !ok {
 		return types.NewError(errors.New("invalid request type"), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())

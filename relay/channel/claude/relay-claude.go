@@ -758,6 +758,11 @@ func HandleClaudeResponseData(c *gin.Context, info *relaycommon.RelayInfo, claud
 		c.Set("claude_web_search_requests", claudeResponse.Usage.ServerToolUse.WebSearchRequests)
 	}
 
+	// 捕获返回给客户端的HTTP响应体（Body）
+	if len(responseData) < 50000 {
+		info.ClientResponseBody = string(responseData)
+	}
+
 	service.IOCopyBytesGracefully(c, httpResp, responseData)
 	return nil
 }
@@ -776,6 +781,12 @@ func ClaudeHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayI
 	if err != nil {
 		return nil, types.NewError(err, types.ErrorCodeBadResponseBody)
 	}
+	
+	// 捕获上游API返回的HTTP响应体（Body）
+	if len(responseBody) < 50000 {
+		info.UpstreamResponseBody = string(responseBody)
+	}
+	
 	if common.DebugEnabled {
 		println("responseBody: ", string(responseBody))
 	}

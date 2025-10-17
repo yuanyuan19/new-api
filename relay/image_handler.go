@@ -22,6 +22,12 @@ import (
 func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {
 	info.InitChannelMeta(c)
 
+	// 捕获客户端原始HTTP请求体（Body）
+	clientRequestBody, err := common.GetRequestBody(c)
+	if err == nil && len(clientRequestBody) > 0 && len(clientRequestBody) < 50000 {
+		info.ClientRequestBody = string(clientRequestBody)
+	}
+
 	imageReq, ok := info.Request.(*dto.ImageRequest)
 	if !ok {
 		return types.NewErrorWithStatusCode(fmt.Errorf("invalid request type, expected dto.ImageRequest, got %T", info.Request), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
@@ -77,6 +83,12 @@ func ImageHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *type
 			if common.DebugEnabled {
 				logger.LogDebug(c, fmt.Sprintf("image request body: %s", string(jsonData)))
 			}
+			
+			// 捕获发给上游的HTTP请求体（Body）
+			if len(jsonData) < 50000 {
+				info.UpstreamRequestBody = string(jsonData)
+			}
+			
 			requestBody = bytes.NewBuffer(jsonData)
 		}
 	}

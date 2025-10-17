@@ -20,6 +20,12 @@ import (
 func RerankHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types.NewAPIError) {
 	info.InitChannelMeta(c)
 
+	// 捕获客户端原始HTTP请求体（Body）
+	clientRequestBody, err := common.GetRequestBody(c)
+	if err == nil && len(clientRequestBody) > 0 && len(clientRequestBody) < 50000 {
+		info.ClientRequestBody = string(clientRequestBody)
+	}
+
 	rerankReq, ok := info.Request.(*dto.RerankRequest)
 	if !ok {
 		return types.NewErrorWithStatusCode(fmt.Errorf("invalid request type, expected dto.RerankRequest, got %T", info.Request), types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
@@ -69,6 +75,12 @@ func RerankHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *typ
 		if common.DebugEnabled {
 			println(fmt.Sprintf("Rerank request body: %s", string(jsonData)))
 		}
+		
+		// 捕获发给上游的HTTP请求体（Body）
+		if len(jsonData) < 50000 {
+			info.UpstreamRequestBody = string(jsonData)
+		}
+		
 		requestBody = bytes.NewBuffer(jsonData)
 	}
 
