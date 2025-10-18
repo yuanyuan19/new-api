@@ -324,20 +324,6 @@ func PostClaudeConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, 
 	other := GenerateClaudeOtherInfo(ctx, relayInfo, modelRatio, groupRatio, completionRatio,
 		cacheTokens, cacheRatio, cacheCreationTokens, cacheCreationRatio, modelPrice, relayInfo.PriceData.GroupRatioInfo.GroupSpecialRatio)
 	
-	// 添加HTTP请求体和响应体详细信息
-	if relayInfo.ClientRequestBody != "" {
-		other["client_request_body"] = relayInfo.ClientRequestBody
-	}
-	if relayInfo.UpstreamRequestBody != "" {
-		other["upstream_request_body"] = relayInfo.UpstreamRequestBody
-	}
-	if relayInfo.UpstreamResponseBody != "" {
-		other["upstream_response_body"] = relayInfo.UpstreamResponseBody
-	}
-	if relayInfo.ClientResponseBody != "" {
-		other["client_response_body"] = relayInfo.ClientResponseBody
-	}
-	
 	model.RecordConsumeLog(ctx, relayInfo.UserId, model.RecordConsumeLogParams{
 		ChannelId:        relayInfo.ChannelId,
 		PromptTokens:     promptTokens,
@@ -463,20 +449,6 @@ func PostAudioConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, u
 	}
 	other := GenerateAudioOtherInfo(ctx, relayInfo, usage, modelRatio, groupRatio,
 		completionRatio.InexactFloat64(), audioRatio.InexactFloat64(), audioCompletionRatio.InexactFloat64(), modelPrice, relayInfo.PriceData.GroupRatioInfo.GroupSpecialRatio)
-	
-	// 添加HTTP请求体和响应体详细信息
-	if relayInfo.ClientRequestBody != "" {
-		other["client_request_body"] = relayInfo.ClientRequestBody
-	}
-	if relayInfo.UpstreamRequestBody != "" {
-		other["upstream_request_body"] = relayInfo.UpstreamRequestBody
-	}
-	if relayInfo.UpstreamResponseBody != "" {
-		other["upstream_response_body"] = relayInfo.UpstreamResponseBody
-	}
-	if relayInfo.ClientResponseBody != "" {
-		other["client_response_body"] = relayInfo.ClientResponseBody
-	}
 	
 	model.RecordConsumeLog(ctx, relayInfo.UserId, model.RecordConsumeLogParams{
 		ChannelId:        relayInfo.ChannelId,

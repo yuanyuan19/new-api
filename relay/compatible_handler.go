@@ -463,20 +463,6 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, usage 
 		other["image_generation_call_price"] = imageGenerationCallPrice
 	}
 	
-	// 添加HTTP请求体和响应体详细信息
-	if relayInfo.ClientRequestBody != "" {
-		other["client_request_body"] = relayInfo.ClientRequestBody
-	}
-	if relayInfo.UpstreamRequestBody != "" {
-		other["upstream_request_body"] = relayInfo.UpstreamRequestBody
-	}
-	if relayInfo.UpstreamResponseBody != "" {
-		other["upstream_response_body"] = relayInfo.UpstreamResponseBody
-	}
-	if relayInfo.ClientResponseBody != "" {
-		other["client_response_body"] = relayInfo.ClientResponseBody
-	}
-	
 	model.RecordConsumeLog(ctx, relayInfo.UserId, model.RecordConsumeLogParams{
 		ChannelId:        relayInfo.ChannelId,
 		PromptTokens:     promptTokens,

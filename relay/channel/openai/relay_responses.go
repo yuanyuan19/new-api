@@ -26,6 +26,12 @@ func OaiResponsesHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http
 	if err != nil {
 		return nil, types.NewOpenAIError(err, types.ErrorCodeReadResponseBodyFailed, http.StatusInternalServerError)
 	}
+	
+	// 捕获上游API返回的HTTP响应体（Body）
+	if len(responseBody) < 50000 {
+		info.UpstreamResponseBody = string(responseBody)
+	}
+	
 	err = common.Unmarshal(responseBody, &responsesResponse)
 	if err != nil {
 		return nil, types.NewOpenAIError(err, types.ErrorCodeBadResponseBody, http.StatusInternalServerError)
@@ -40,6 +46,11 @@ func OaiResponsesHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http
 		c.Set("image_generation_call_size", responsesResponse.GetSize())
 	}
 
+	// 捕获返回给客户端的HTTP响应体（Body）
+	if len(responseBody) < 50000 {
+		info.ClientResponseBody = string(responseBody)
+	}
+	
 	// 写入新的 response body
 	service.IOCopyBytesGracefully(c, resp, responseBody)
 

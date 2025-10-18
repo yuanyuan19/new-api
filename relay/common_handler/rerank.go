@@ -20,6 +20,12 @@ func RerankHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 	if err != nil {
 		return nil, types.NewOpenAIError(err, types.ErrorCodeReadResponseBodyFailed, http.StatusInternalServerError)
 	}
+	
+	// 捕获上游API返回的HTTP响应体（Body）
+	if len(responseBody) < 50000 {
+		info.UpstreamResponseBody = string(responseBody)
+	}
+	
 	service.CloseResponseBodyGracefully(resp)
 	if common.DebugEnabled {
 		println("reranker response body: ", string(responseBody))
@@ -69,6 +75,12 @@ func RerankHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Respo
 		jinaResp.Usage.PromptTokens = jinaResp.Usage.TotalTokens
 	}
 
+	// 捕获返回给客户端的HTTP响应体（Body）
+	clientResponseBody, err := common.Marshal(jinaResp)
+	if err == nil && len(clientResponseBody) < 50000 {
+		info.ClientResponseBody = string(clientResponseBody)
+	}
+	
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.JSON(http.StatusOK, jinaResp)
 	return &jinaResp.Usage, nil

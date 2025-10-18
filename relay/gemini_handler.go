@@ -221,7 +221,6 @@ func GeminiEmbeddingHandler(c *gin.Context, info *relaycommon.RelayInfo) (newAPI
 	info.IsGeminiBatchEmbedding = isBatch
 
 	var req dto.Request
-	var err error
 	var inputTexts []string
 
 	if isBatch {

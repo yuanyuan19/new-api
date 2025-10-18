@@ -64,6 +64,21 @@ func GenerateTextOtherInfo(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, m
 	}
 	other["admin_info"] = adminInfo
 	appendRequestPath(ctx, relayInfo, other)
+	
+	// 添加请求和响应体信息
+	if relayInfo.ClientRequestBody != "" {
+		other["client_request_body"] = relayInfo.ClientRequestBody
+	}
+	if relayInfo.UpstreamRequestBody != "" {
+		other["upstream_request_body"] = relayInfo.UpstreamRequestBody
+	}
+	if relayInfo.UpstreamResponseBody != "" {
+		other["upstream_response_body"] = relayInfo.UpstreamResponseBody
+	}
+	if relayInfo.ClientResponseBody != "" {
+		other["client_response_body"] = relayInfo.ClientResponseBody
+	}
+	
 	return other
 }
 
