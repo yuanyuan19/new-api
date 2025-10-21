@@ -6,8 +6,10 @@ import (
 	"net/http"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/types"
 
 	"github.com/gin-gonic/gin"
@@ -181,4 +183,38 @@ func GenerateFinalUsageResponse(id string, createAt int64, model string, usage d
 		Choices:           make([]dto.ChatCompletionsStreamResponseChoice, 0),
 		Usage:             &usage,
 	}
+}
+
+// HandleSmartPollingFeedback handles the feedback for smart polling mode
+// This should be called after a request is completed to update the smart polling state
+func HandleSmartPollingFeedback(c *gin.Context, statusCode int, err error) {
+	// Get channel information from context
+	channelId := common.GetContextKeyInt(c, constant.ContextKeyChannelId)
+	if channelId == 0 {
+		return
+	}
+
+	isMultiKey := common.GetContextKeyBool(c, constant.ContextKeyChannelIsMultiKey)
+	if !isMultiKey {
+		return
+	}
+
+	keyIndex := common.GetContextKeyInt(c, constant.ContextKeyChannelMultiKeyIndex)
+
+	// Get channel from cache
+	channel, getErr := model.CacheGetChannel(channelId)
+	if getErr != nil || channel == nil {
+		return
+	}
+
+	// Only handle smart polling mode
+	if channel.ChannelInfo.MultiKeyMode != constant.MultiKeyModeSmartPolling {
+		return
+	}
+
+	// Determine if the request was successful
+	success := err == nil && statusCode >= 200 && statusCode < 300
+
+	// Handle the result
+	channel.HandleSmartPollingResult(keyIndex, success, statusCode)
 }

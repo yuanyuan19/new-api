@@ -169,6 +169,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 	var httpResp *http.Response
 	resp, err := adaptor.DoRequest(c, info, requestBody)
 	if err != nil {
+		helper.HandleSmartPollingFeedback(c, http.StatusInternalServerError, err)
 		return types.NewOpenAIError(err, types.ErrorCodeDoRequestFailed, http.StatusInternalServerError)
 	}
 
@@ -181,6 +182,7 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 			newApiErr := service.RelayErrorHandler(c.Request.Context(), httpResp, false)
 			// reset status code 重置状态码
 			service.ResetStatusCode(newApiErr, statusCodeMappingStr)
+			helper.HandleSmartPollingFeedback(c, httpResp.StatusCode, newApiErr)
 			return newApiErr
 		}
 	}
@@ -189,8 +191,16 @@ func TextHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIError *types
 	if newApiErr != nil {
 		// reset status code 重置状态码
 		service.ResetStatusCode(newApiErr, statusCodeMappingStr)
+		statusCode := http.StatusInternalServerError
+		if httpResp != nil {
+			statusCode = httpResp.StatusCode
+		}
+		helper.HandleSmartPollingFeedback(c, statusCode, newApiErr)
 		return newApiErr
 	}
+
+	// Request succeeded
+	helper.HandleSmartPollingFeedback(c, http.StatusOK, nil)
 
 	if strings.HasPrefix(info.OriginModelName, "gpt-4o-audio") {
 		service.PostAudioConsumeQuota(c, info, usage.(*dto.Usage), "")

@@ -1852,6 +1852,7 @@ const EditChannelModal = (props) => {
                           optionList={[
                             { label: t('随机'), value: 'random' },
                             { label: t('轮询'), value: 'polling' },
+                            { label: t('智能轮询'), value: 'smart_polling' },
                           ]}
                           style={{ width: '100%' }}
                           value={inputs.multi_key_mode || 'random'}
@@ -1865,6 +1866,15 @@ const EditChannelModal = (props) => {
                             type='warning'
                             description={t(
                               '轮询模式必须搭配Redis和内存缓存功能使用，否则性能将大幅降低，并且无法实现轮询功能',
+                            )}
+                            className='!rounded-lg mt-2'
+                          />
+                        )}
+                        {inputs.multi_key_mode === 'smart_polling' && (
+                          <Banner
+                            type='info'
+                            description={t(
+                              '智能轮询模式：记住上次使用的Key位置，请求失败时自动重试，达到最大重试次数后切换到下一个Key',
                             )}
                             className='!rounded-lg mt-2'
                           />

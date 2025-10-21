@@ -65,6 +65,10 @@ type ChannelInfo struct {
 	MultiKeyDisabledTime   map[int]int64         `json:"multi_key_disabled_time,omitempty"`   // key禁用时间列表，key index -> time
 	MultiKeyPollingIndex   int                   `json:"multi_key_polling_index"`             // 多Key模式下轮询的key索引
 	MultiKeyMode           constant.MultiKeyMode `json:"multi_key_mode"`
+	// 智能轮询相关字段
+	SmartPollingLastUsedIndex int `json:"smart_polling_last_used_index"` // 上次使用的Key索引
+	SmartPollingRetryCount    int `json:"smart_polling_retry_count"`     // 当前Key的重试次数
+	SmartPollingMaxRetries    int `json:"smart_polling_max_retries"`     // 最大重试次数，默认3次
 }
 
 // Value implements driver.Valuer interface
@@ -181,9 +185,116 @@ func (channel *Channel) GetNextEnabledKey() (string, int, *types.NewAPIError) {
 		}
 		// Fallback – should not happen, but return first enabled key
 		return keys[enabledIdx[0]], enabledIdx[0], nil
+	case constant.MultiKeyModeSmartPolling:
+		// Smart polling mode
+		return channel.getNextSmartPollingKey(keys, enabledIdx, getStatus)
 	default:
 		// Unknown mode, default to first enabled key (or original key string)
 		return keys[enabledIdx[0]], enabledIdx[0], nil
+	}
+}
+
+// getNextSmartPollingKey implements smart polling logic
+func (channel *Channel) getNextSmartPollingKey(keys []string, enabledIdx []int, getStatus func(int) int) (string, int, *types.NewAPIError) {
+	// Initialize smart polling parameters
+	if channel.ChannelInfo.SmartPollingMaxRetries == 0 {
+		channel.ChannelInfo.SmartPollingMaxRetries = 3 // Default max retries
+	}
+
+	lastUsedIdx := channel.ChannelInfo.SmartPollingLastUsedIndex
+	retryCount := channel.ChannelInfo.SmartPollingRetryCount
+
+	// If the last used key is still available and hasn't reached max retries, continue using it
+	if lastUsedIdx >= 0 && lastUsedIdx < len(keys) &&
+		getStatus(lastUsedIdx) == common.ChannelStatusEnabled &&
+		retryCount < channel.ChannelInfo.SmartPollingMaxRetries {
+
+		// Update retry count
+		channel.ChannelInfo.SmartPollingRetryCount++
+
+		defer func() {
+			if common.DebugEnabled {
+				println(fmt.Sprintf("channel %d smart polling: using key index %d, retry count: %d", channel.Id, lastUsedIdx, channel.ChannelInfo.SmartPollingRetryCount))
+			}
+			if !common.MemoryCacheEnabled {
+				_ = channel.SaveChannelInfo()
+			}
+		}()
+
+		return keys[lastUsedIdx], lastUsedIdx, nil
+	}
+
+	// Need to switch to the next key
+	// Start from the last used index and find the next available key
+	start := lastUsedIdx
+	if start < 0 || start >= len(keys) {
+		start = 0
+	}
+
+	for i := 0; i < len(keys); i++ {
+		idx := (start + i + 1) % len(keys) // +1 means start from the next position
+		if getStatus(idx) == common.ChannelStatusEnabled {
+			// Update smart polling state
+			channel.ChannelInfo.SmartPollingLastUsedIndex = idx
+			channel.ChannelInfo.SmartPollingRetryCount = 0 // Reset retry count
+
+			defer func() {
+				if common.DebugEnabled {
+					println(fmt.Sprintf("channel %d smart polling: switched to key index %d", channel.Id, idx))
+				}
+				if !common.MemoryCacheEnabled {
+					_ = channel.SaveChannelInfo()
+				}
+			}()
+
+			return keys[idx], idx, nil
+		}
+	}
+
+	// If no available key is found, return the first enabled key
+	channel.ChannelInfo.SmartPollingLastUsedIndex = enabledIdx[0]
+	channel.ChannelInfo.SmartPollingRetryCount = 0
+
+	defer func() {
+		if !common.MemoryCacheEnabled {
+			_ = channel.SaveChannelInfo()
+		}
+	}()
+
+	return keys[enabledIdx[0]], enabledIdx[0], nil
+}
+
+// HandleSmartPollingResult handles the result of a smart polling request
+func (channel *Channel) HandleSmartPollingResult(keyIndex int, success bool, statusCode int) {
+	if channel.ChannelInfo.MultiKeyMode != constant.MultiKeyModeSmartPolling {
+		return
+	}
+
+	lock := GetChannelPollingLock(channel.Id)
+	lock.Lock()
+	defer lock.Unlock()
+
+	// If request is successful (2xx status code), reset retry count
+	if success && statusCode >= 200 && statusCode < 300 {
+		channel.ChannelInfo.SmartPollingRetryCount = 0
+		if !common.MemoryCacheEnabled {
+			_ = channel.SaveChannelInfo()
+		}
+		return
+	}
+
+	// If request failed and it's the currently used key, increase retry count
+	if keyIndex == channel.ChannelInfo.SmartPollingLastUsedIndex {
+		channel.ChannelInfo.SmartPollingRetryCount++
+
+		if common.DebugEnabled {
+			println(fmt.Sprintf("channel %d smart polling: request failed, retry count: %d/%d", channel.Id, channel.ChannelInfo.SmartPollingRetryCount, channel.ChannelInfo.SmartPollingMaxRetries))
+		}
+
+		// If max retries reached, the next call to GetNextEnabledKey will switch to the next key
+		if !common.MemoryCacheEnabled {
+			_ = channel.SaveChannelInfo()
+		}
 	}
 }
 
